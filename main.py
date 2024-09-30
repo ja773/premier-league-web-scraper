@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+import pandas as pd
 
 standings_url = 'https://fbref.com/en/comps/9/2023-2024/2023-2024-Premier-League-Stats'
 
