@@ -14,6 +14,9 @@ for year in years:
 
     # Squads Data for Scores and Fixtures
     soup = BeautifulSoup(data.text)
+
+    time.sleep(5)
+
     standings_table = soup.select('table.stats_table')[0]
     links = standings_table.find_all('a')
     links = [l.get('href') for l in links]
