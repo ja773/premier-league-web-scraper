@@ -1,36 +1,57 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import time
 
 # Data Scraping from 19/20 season to 23/24 season
-standings_url = 'https://fbref.com/en/comps/9/2023-2024/2023-2024-Premier-League-Stats'
+years = list(range(2024,2019,-1))
+all_matches = []
 
-data = requests.get(standings_url)
+for year in years:
+    standings_url = 'https://fbref.com/en/comps/9/2023-2024/2023-2024-Premier-League-Stats'
 
-# Squads Data for Scores and Fixtures
-soup = BeautifulSoup(data.text, features = 'html.parser')
-standings_table = soup.select('table.stats_table')[0]
-links = standings_table.find_all('a')
-links = [l.get('href') for l in links]
-links = [l for l in links if '/squads/' in l]
-team_urls = [f'https://fbref.com{l}' for l in links]
+    data = requests.get(standings_url)
 
-team_url = team_urls[0]
-data = requests.get(team_url)
+    # Squads Data for Scores and Fixtures
+    soup = BeautifulSoup(data.text, features = 'html.parser')
+    standings_table = soup.select('table.stats_table')[0]
+    links = standings_table.find_all('a')
+    links = [l.get('href') for l in links]
+    links = [l for l in links if '/squads/' in l]
+    team_urls = [f'https://fbref.com{l}' for l in links]
 
-matches = pd.read_html(data.text, match = 'Scores & Fixtures')[0]
+    # Iterate through all squads
+    for team_url in team_urls:
+        team_name = team_url.split('/')[-1].replace('-Stats','').replace('-','')
 
-# Squads Shooting Stats
-soup = BeautifulSoup(data.text)
-links = soup.find_all('a')
-links = [l.get('href') for l in links]
-links = [l for l in links if l and 'all_comps/shooting/' in l]
+        data = requests.get(team_url)
 
-data = requests.get(f'https://fbref.com{links[0]}')
-shooting = pd.read_html(data.text, match = 'Shooting')[0]
+        matches = pd.read_html(data.text, match = 'Scores & Fixtures')[0]
 
-shooting.columns = shooting.columns.droplevel()
+        # Squads Shooting Stats
+        soup = BeautifulSoup(data.text)
+        links = soup.find_all('a')
+        links = [l.get('href') for l in links]
+        links = [l for l in links if l and 'all_comps/shooting/' in l]
 
-# Merging Scores and Shooting Data
-team_data = matches.merge(shooting[['Date', 'Sh', 'SoT', 'Dist', 'FK', 'PK', 'PKatt']], on = 'Date')
+        data = requests.get(f'https://fbref.com{links[0]}')
+        shooting = pd.read_html(data.text, match = 'Shooting')[0]
+
+        shooting.columns = shooting.columns.droplevel()
+
+        # Merging Scores and Shooting Data
+        try:
+            team_data = matches.merge(shooting[['Date', 'Sh', 'SoT', 'Dist', 'FK', 'PK', 'PKatt']], on = 'Date')
+        except ValueError:
+            continue
+
+        team_data = team_data[team_data['Comp'] == 'Premier League']
+        team_data['Season'] = year
+        team_data['Team'] = team_name
+        all_matches.append(team_data)
+
+        # Delay to prevent scraping too quickly
+        time.sleep(1)
+
+
 
