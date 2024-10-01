@@ -10,12 +10,14 @@ all_matches = []
 for year in years:
     standings_url = 'https://fbref.com/en/comps/9/Premier-League-Stats'
 
-    data = requests.get(standings_url)
+    data = requests.get(standings_url, 'lxml')
 
     # Squads Data for Scores and Fixtures
-    soup = BeautifulSoup(data.text)
+    soup = BeautifulSoup(data.text, features = 'lxml')
 
-    time.sleep(5)
+    time.sleep(1)
+
+    print('fetching data for ',year)
 
     standings_table = soup.select('table.stats_table')[0]
     links = standings_table.find_all('a')
@@ -31,7 +33,7 @@ for year in years:
     for team_url in team_urls:
         team_name = team_url.split('/')[-1].replace('-Stats','').replace('-','')
 
-        data = requests.get(team_url)
+        data = requests.get(team_url, 'lxml')
 
         matches = pd.read_html(data.text, match = 'Scores & Fixtures')[0]
 
@@ -41,8 +43,8 @@ for year in years:
         links = [l.get('href') for l in links]
         links = [l for l in links if l and 'all_comps/shooting/' in l]
 
-        data = requests.get(f'https://fbref.com{links[0]}')
-        shooting = pd.read_html(data.text, match = 'Shooting')[0]
+        data = requests.get(f'https://fbref.com{links[0]}', 'lxml')
+        shooting = pd.read_html(str(data.text), match = 'Shooting')[0]
 
         shooting.columns = shooting.columns.droplevel()
 
@@ -58,7 +60,7 @@ for year in years:
         all_matches.append(team_data)
 
         # Delay to prevent scraping too quickly
-        time.sleep(1)
+        time.sleep(5)
 
 # Combining all data frames
 match_df = pd.concat(all_matches)
