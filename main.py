@@ -4,21 +4,25 @@ import pandas as pd
 import time
 
 # Data Scraping from 19/20 season to 23/24 season
-years = list(range(2024,2019,-1))
+years = list(range(2024,2021,-1))
 all_matches = []
 
 for year in years:
-    standings_url = 'https://fbref.com/en/comps/9/2023-2024/2023-2024-Premier-League-Stats'
+    standings_url = 'https://fbref.com/en/comps/9/Premier-League-Stats'
 
     data = requests.get(standings_url)
 
     # Squads Data for Scores and Fixtures
-    soup = BeautifulSoup(data.text, features = 'html.parser')
+    soup = BeautifulSoup(data.text)
     standings_table = soup.select('table.stats_table')[0]
     links = standings_table.find_all('a')
     links = [l.get('href') for l in links]
     links = [l for l in links if '/squads/' in l]
     team_urls = [f'https://fbref.com{l}' for l in links]
+
+    # Finding URL for previous season
+    previous_season = soup.select('a.prev')[0].get('href')
+    standings_url = f'https://fbref.com{previous_season}'
 
     # Iterate through all squads
     for team_url in team_urls:
@@ -29,7 +33,7 @@ for year in years:
         matches = pd.read_html(data.text, match = 'Scores & Fixtures')[0]
 
         # Squads Shooting Stats
-        soup = BeautifulSoup(data.text)
+        soup = BeautifulSoup(data.text,features = 'html.parser')
         links = soup.find_all('a')
         links = [l.get('href') for l in links]
         links = [l for l in links if l and 'all_comps/shooting/' in l]
@@ -53,5 +57,9 @@ for year in years:
         # Delay to prevent scraping too quickly
         time.sleep(1)
 
+# Combining all data frames
+match_df = pd.concat(all_matches)
 
+#Export to CSV
+match_df.to_csv('matches.csv')
 
