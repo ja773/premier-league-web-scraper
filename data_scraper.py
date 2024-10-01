@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import time
+from io import StringIO
 
 # Data Scraping from 19/20 season to 23/24 season
 years = list(range(2024,2021,-1))
@@ -35,16 +36,19 @@ for year in years:
 
         data = requests.get(team_url, 'lxml')
 
-        matches = pd.read_html(data.text, match = 'Scores & Fixtures')[0]
+        matches = pd.read_html(StringIO(data.text), match = 'Scores & Fixtures')[0]
 
         # Squads Shooting Stats
-        soup = BeautifulSoup(data.text,features = 'html.parser')
+        soup = BeautifulSoup(data.text,features = 'lxml')
         links = soup.find_all('a')
         links = [l.get('href') for l in links]
         links = [l for l in links if l and 'all_comps/shooting/' in l]
 
         data = requests.get(f'https://fbref.com{links[0]}', 'lxml')
-        shooting = pd.read_html(str(data.text), match = 'Shooting')[0]
+        try:
+            shooting = pd.read_html(StringIO(data.text), match = 'Shooting')[0]
+        except ValueError:
+            continue
 
         shooting.columns = shooting.columns.droplevel()
 
